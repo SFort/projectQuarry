@@ -8,4 +8,4 @@ rust-ini = "0.13.0"
 [target.'cfg(any(unix, macos))'.dependencies.cursive]
 version = "0.10.0"
 default-features = false
-features = ["pancurses-backend"]
+features = ["termion-backend"]
