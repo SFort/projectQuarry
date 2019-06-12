@@ -1,11 +1,12 @@
 [package]
-name = "projectQuarry"
-version = "0.0.1"
+name = "project_quarry"
+version = "0.0.104"
 
 [dependencies]
-rust-ini = "0.13.0"
-
-[target.'cfg(any(unix, macos))'.dependencies.cursive]
-version = "0.10.0"
-default-features = false
-features = ["termion-backend"]
+rust-embed = "4.4.0"
+conrod_core = "0.65.0"
+conrod_winit = "0.65.0"
+conrod_glium = "0.65.0"
+glium = "0.23.0"
+winit = "*"
+git2 = "0.9.1"
