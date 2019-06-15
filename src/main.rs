@@ -50,8 +50,8 @@ fn main() {
     let (send, recv) = std::sync::mpsc::channel();
     let path = path_string.clone();
     let thread_git = thread::spawn(move || {
-        let url = "https://github.com/ElementalRealms/tmp_pk.git";
-        let path_git = &format!("{}/.tmpgit", path);
+        let url = "https://github.com/ssf-tf/mc-pack.git";
+        let path_git = &format!("{}/.tmp_git", path);
         let repo = match Repository::open(path_git) {
             Ok(repo) => repo,
             Err(_) => Repository::clone(url, path_git).unwrap(),
@@ -93,21 +93,24 @@ fn main() {
                 Command::new("cmd")
                     .args(&[
                         "/C",
-                        &format!("robocopy {0}/.tmpgit/mods {0}/mods /mir", path_string),
+                        &format!("robocopy {0}/.tmp_git/mods {0}/mods /mir", path_string),
                     ])
                     .output()
                     .expect("failed to execute copy1");
                 Command::new("cmd")
                     .args(&[
                         "/C",
-                        &format!("robocopy {0}/.tmpgit/config {0}/config /mir", path_string),
+                        &format!("robocopy {0}/.tmp_git/config {0}/config /mir", path_string),
                     ])
                     .output()
                     .expect("failed to execute copy2");
                 Command::new("cmd")
                     .args(&[
                         "/C",
-                        &format!("robocopy {0}/.tmpgit/scripts {0}/scripts /mir", path_string),
+                        &format!(
+                            "robocopy {0}/.tmp_git/scripts {0}/scripts /mir",
+                            path_string
+                        ),
                     ])
                     .output()
                     .expect("failed to execute copy3");
@@ -115,7 +118,7 @@ fn main() {
                     .args(&[
                         "/C",
                         &format!(
-                            "robocopy {0}/.tmpgit/libraries {0}/libraries /s",
+                            "robocopy {0}/.tmp_git/libraries {0}/libraries /s",
                             path_string
                         ),
                     ])
@@ -125,7 +128,7 @@ fn main() {
                     .args(&[
                         "/C",
                         &format!(
-                            "robocopy {0}/.tmpgit/resources {0}/resources /s",
+                            "robocopy {0}/.tmp_git/resources {0}/resources /s",
                             path_string
                         ),
                     ])
@@ -134,7 +137,10 @@ fn main() {
                 Command::new("cmd")
                     .args(&[
                         "/C",
-                        &format!("robocopy {0}/.tmpgit/versions {0}/versions /s", path_string),
+                        &format!(
+                            "robocopy {0}/.tmp_git/versions {0}/versions /s",
+                            path_string
+                        ),
                     ])
                     .output()
                     .expect("failed to execute copy6");
