@@ -56,10 +56,17 @@ fn main() {
             Ok(repo) => repo,
             Err(_) => Repository::clone(url, path_git).unwrap(),
         };
-        repo.find_remote("origin")
-            .unwrap()
-            .download(&[""], None)
+        let mut remote = match repo.find_remote("origin") {
+            Ok(r) => r,
+            Err(_) => repo.remote("origin", url).unwrap(),
+        };
+        remote.download(&[""], None).unwrap();
+        remote.fetch(&["client-release"], None, None).unwrap();
+        let oid = repo
+            .refname_to_id("refs/remotes/origin/client-release")
             .unwrap();
+        let object = repo.find_object(oid, None).unwrap();
+        repo.reset(&object, git2::ResetType::Hard, None).unwrap();
 
         send.send(true).unwrap();
     });
