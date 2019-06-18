@@ -61,10 +61,8 @@ fn main() {
             Err(_) => repo.remote("origin", url).unwrap(),
         };
         remote.download(&[""], None).unwrap();
-        remote.fetch(&["client-release"], None, None).unwrap();
-        let oid = repo
-            .refname_to_id("refs/remotes/origin/client-release")
-            .unwrap();
+        remote.fetch(&["master"], None, None).unwrap();
+        let oid = repo.refname_to_id("refs/remotes/origin/master").unwrap();
         let object = repo.find_object(oid, None).unwrap();
         repo.reset(&object, git2::ResetType::Hard, None).unwrap();
 

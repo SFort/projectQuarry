@@ -1,6 +1,6 @@
 [package]
 name = "project_quarry"
-version = "0.0.105"
+version = "0.0.106"
 
 [dependencies]
 rust-embed = "4.4.0"
