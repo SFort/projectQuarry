@@ -1,6 +1,6 @@
 [package]
 name = "sf_mc_installer"
-version = "0.0.106"
+version = "0.0.201"
 authors = ["SFort"]
 
 [dependencies]

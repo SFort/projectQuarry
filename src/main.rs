@@ -8,27 +8,30 @@ extern crate base64;
 extern crate conrod_glium;
 extern crate git2;
 extern crate glium;
-
 #[derive(RustEmbed)]
 #[folder = "assets/"]
 struct Asset;
 use conrod_core::{text, Colorable};
 use glium::Surface;
-use std::{env, thread};
+use std::{env, thread, time::Instant};
 
 mod conrod_support;
+mod sfl;
 
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 fn main() {
     let mut args = env::args();
     args.nth(0);
     #[cfg(not(target_os = "windows"))]
-    let path_string = env::var("HOME").expect("Failed to get your home directory") + "/.minecraft";
+    let path_root = env::var("HOME").expect("Failed to get your home directory") + "/.minecraft";
     #[cfg(target_os = "windows")]
-    let path_string = env::var("APPDATA").expect("Failed to get APPDATA directory") + "/.minecraft";
-    let url_string = "https://github.com/ssf-tf/mc-pack1.git";
-    let path = format!("{0}/.tmp_git/{1}", path_string, base64::encode(url_string));
-    use git2::Repository;
+    let path_root = env::var("APPDATA").expect("Failed to get APPDATA directory") + "/.minecraft";
+    let url = if let Some(input) = args.nth(0) {
+        input
+    } else {
+        "https://github.com/ssf-tf/mc-pack1.git".into()
+    };
+    let path = format!("{0}/.tmp_git/{1}", path_root, base64::encode(&url));
 
     const WIDTH: u32 = 480;
     const HEIGHT: u32 = 480;
@@ -51,27 +54,31 @@ fn main() {
     let image_map = conrod_core::image::Map::<glium::texture::Texture2d>::new();
     let mut event_loop = conrod_support::EventLoop::new();
     let (send, recv) = std::sync::mpsc::channel();
-    let url = url_string.clone();
-    let path_git = path.clone();
+    //off thread the install
+    let path_to = if let Some(input) = args.nth(0) {
+        input
+    } else {
+        path_root.into()
+    };
     let thread_git = thread::spawn(move || {
-        let repo = match Repository::open(&path_git) {
-            Ok(repo) => repo,
-            Err(_) => Repository::clone(url, path_git).unwrap(),
-        };
-        let mut remote = match repo.find_remote("origin") {
-            Ok(r) => r,
-            Err(_) => repo.remote("origin", url).unwrap(),
-        };
-        remote.download(&[""], None).unwrap();
-        remote.fetch(&["master"], None, None).unwrap();
-        let oid = repo.refname_to_id("refs/remotes/origin/master").unwrap();
-        let object = repo.find_object(oid, None).unwrap();
-        repo.reset(&object, git2::ResetType::Hard, None).unwrap();
+        sfl::update(&path, &url);
 
+        if cfg!(target_os = "windows") {
+            use sfl::robcop;
+            robcop(&path_to, &path, "mods", true);
+            robcop(&path_to, &path, "config", true);
+            robcop(&path_to, &path, "scripts", true);
+            robcop(&path_to, &path, "libraries", false);
+            robcop(&path_to, &path, "resources", false);
+            robcop(&path_to, &path, "versions", false);
+        } else {
+            //TODO linux folder copy
+        };
         send.send(true).unwrap();
     });
     let mut text = "Installing";
     let mut green = 0.14;
+    let mut autokill: Option<Instant> = None;
     'render: loop {
         for event in event_loop.next(&mut events_loop) {
             // Use the `winit` backend feature to convert the winit event to a conrod one.
@@ -92,36 +99,16 @@ fn main() {
         use conrod_core::widget::{Canvas, Text};
         use conrod_core::{color::hsl, color::rgb, Positionable, Widget};
 
+        if let Some(time) = autokill {
+            if time.elapsed().as_secs() > 4 {
+                break 'render;
+            }
+        }
+
         if let Ok(_) = recv.try_recv() {
+            autokill = Some(Instant::now());
             text = "DONE";
             green = 0.6;
-            if cfg!(target_os = "windows") {
-                use std::process::Command;
-                fn robcop(from: &str, to: &str, dir: &str, mir: bool) {
-                    Command::new("cmd")
-                        .args(&[
-                            "/C",
-                            &format!(
-                                "robocopy {1}/{2} {0}/{2} /{3}",
-                                to,
-                                from,
-                                dir,
-                                if mir { "mir" } else { "s" }
-                            ),
-                        ])
-                        .output()
-                        .expect("failed to robocopy");
-                }
-                robcop(&path_string, &path, "mods", true);
-                robcop(&path_string, &path, "config", true);
-                robcop(&path_string, &path, "scripts", true);
-
-                robcop(&path_string, &path, "libraries", false);
-                robcop(&path_string, &path, "resources", false);
-                robcop(&path_string, &path, "versions", false);
-            } else {
-                //TODO linux folder copy
-            };
         }
         Canvas::new()
             .pad(15.0)
