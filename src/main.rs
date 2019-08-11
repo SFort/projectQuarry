@@ -65,12 +65,12 @@ fn main() {
 
         if cfg!(target_os = "windows") {
             use sfl::robcop;
-            robcop(&path_to, &path, "mods", true);
-            robcop(&path_to, &path, "config", true);
-            robcop(&path_to, &path, "scripts", true);
-            robcop(&path_to, &path, "libraries", false);
-            robcop(&path_to, &path, "resources", false);
-            robcop(&path_to, &path, "versions", false);
+            robcop(&path, &path_to, "mods", true);
+            robcop(&path, &path_to, "config", true);
+            robcop(&path, &path_to, "scripts", true);
+            robcop(&path, &path_to, "libraries", false);
+            robcop(&path, &path_to, "resources", false);
+            robcop(&path, &path_to, "versions", false);
         } else {
             //TODO linux folder copy
         };
