@@ -1,9 +1,11 @@
 [package]
-name = "project_quarry"
+name = "sf_mc_installer"
 version = "0.0.106"
+authors = ["SFort"]
 
 [dependencies]
 rust-embed = "4.4.0"
+base64 = "0.10.1"
 conrod_core = "0.65.0"
 conrod_winit = "0.65.0"
 conrod_glium = "0.65.0"

@@ -4,6 +4,7 @@ extern crate conrod_core;
 extern crate conrod_winit;
 #[macro_use]
 extern crate rust_embed;
+extern crate base64;
 extern crate conrod_glium;
 extern crate git2;
 extern crate glium;
@@ -25,6 +26,8 @@ fn main() {
     let path_string = env::var("HOME").expect("Failed to get your home directory") + "/.minecraft";
     #[cfg(target_os = "windows")]
     let path_string = env::var("APPDATA").expect("Failed to get APPDATA directory") + "/.minecraft";
+    let url_string = "https://github.com/ssf-tf/mc-pack1.git";
+    let path = format!("{0}/.tmp_git/{1}", path_string, base64::encode(url_string));
     use git2::Repository;
 
     const WIDTH: u32 = 480;
@@ -48,11 +51,10 @@ fn main() {
     let image_map = conrod_core::image::Map::<glium::texture::Texture2d>::new();
     let mut event_loop = conrod_support::EventLoop::new();
     let (send, recv) = std::sync::mpsc::channel();
-    let path = path_string.clone();
+    let url = url_string.clone();
+    let path_git = path.clone();
     let thread_git = thread::spawn(move || {
-        let url = "https://github.com/ssf-tf/mc-pack.git";
-        let path_git = &format!("{}/.tmp_git", path);
-        let repo = match Repository::open(path_git) {
+        let repo = match Repository::open(&path_git) {
             Ok(repo) => repo,
             Err(_) => Repository::clone(url, path_git).unwrap(),
         };
@@ -95,60 +97,28 @@ fn main() {
             green = 0.6;
             if cfg!(target_os = "windows") {
                 use std::process::Command;
-                Command::new("cmd")
-                    .args(&[
-                        "/C",
-                        &format!("robocopy {0}/.tmp_git/mods {0}/mods /mir", path_string),
-                    ])
-                    .output()
-                    .expect("failed to execute copy1");
-                Command::new("cmd")
-                    .args(&[
-                        "/C",
-                        &format!("robocopy {0}/.tmp_git/config {0}/config /mir", path_string),
-                    ])
-                    .output()
-                    .expect("failed to execute copy2");
-                Command::new("cmd")
-                    .args(&[
-                        "/C",
-                        &format!(
-                            "robocopy {0}/.tmp_git/scripts {0}/scripts /mir",
-                            path_string
-                        ),
-                    ])
-                    .output()
-                    .expect("failed to execute copy3");
-                Command::new("cmd")
-                    .args(&[
-                        "/C",
-                        &format!(
-                            "robocopy {0}/.tmp_git/libraries {0}/libraries /s",
-                            path_string
-                        ),
-                    ])
-                    .output()
-                    .expect("failed to execute copy4");
-                Command::new("cmd")
-                    .args(&[
-                        "/C",
-                        &format!(
-                            "robocopy {0}/.tmp_git/resources {0}/resources /s",
-                            path_string
-                        ),
-                    ])
-                    .output()
-                    .expect("failed to execute copy5");
-                Command::new("cmd")
-                    .args(&[
-                        "/C",
-                        &format!(
-                            "robocopy {0}/.tmp_git/versions {0}/versions /s",
-                            path_string
-                        ),
-                    ])
-                    .output()
-                    .expect("failed to execute copy6");
+                fn robcop(from: &str, to: &str, dir: &str, mir: bool) {
+                    Command::new("cmd")
+                        .args(&[
+                            "/C",
+                            &format!(
+                                "robocopy {1}/{2} {0}/{2} /{3}",
+                                to,
+                                from,
+                                dir,
+                                if mir { "mir" } else { "s" }
+                            ),
+                        ])
+                        .output()
+                        .expect("failed to robocopy");
+                }
+                robcop(&path_string, &path, "mods", true);
+                robcop(&path_string, &path, "config", true);
+                robcop(&path_string, &path, "scripts", true);
+
+                robcop(&path_string, &path, "libraries", false);
+                robcop(&path_string, &path, "resources", false);
+                robcop(&path_string, &path, "versions", false);
             } else {
                 //TODO linux folder copy
             };
