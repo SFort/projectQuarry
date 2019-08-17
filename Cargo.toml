@@ -1,6 +1,6 @@
 [package]
-name = "sf_mc_installer"
-version = "0.0.202"
+name = "ssf_installer"
+version = "0.0.203"
 authors = ["SFort"]
 
 [dependencies]

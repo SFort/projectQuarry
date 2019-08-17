@@ -60,6 +60,7 @@ fn main() {
     } else {
         path_root.into()
     };
+    let path_lib = path_root.clone();
     let thread_git = thread::spawn(move || {
         sfl::update(&path, &url);
 
@@ -68,9 +69,8 @@ fn main() {
             robcop(&path, &path_to, "mods", true);
             robcop(&path, &path_to, "config", true);
             robcop(&path, &path_to, "scripts", true);
-            robcop(&path, &path_to, "libraries", false);
             robcop(&path, &path_to, "resources", false);
-            robcop(&path, &path_to, "versions", false);
+            robcop(&path, &path_lib, "versions", false);
         } else {
             //TODO linux folder copy
         };
