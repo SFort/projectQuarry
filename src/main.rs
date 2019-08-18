@@ -55,12 +55,12 @@ fn main() {
     let mut event_loop = conrod_support::EventLoop::new();
     let (send, recv) = std::sync::mpsc::channel();
     //off thread the install
+    let path_lib = path_root.clone();
     let path_to = if let Some(input) = args.nth(0) {
         input
     } else {
         path_root.into()
     };
-    let path_lib = path_root.clone();
     let thread_git = thread::spawn(move || {
         sfl::update(&path, &url);
 
