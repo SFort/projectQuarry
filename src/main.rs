@@ -62,8 +62,9 @@ fn main() {
         path_root.into()
     };
     let thread_git = thread::spawn(move || {
-        sfl::update(&path, &url);
+        sfl::update(&path, &url, &send);
 
+        send.send(Some("Moving Files".to_string())).unwrap();
         if cfg!(target_os = "windows") {
             use sfl::robcop;
             robcop(&path, &path_to, "mods", true);
@@ -74,9 +75,11 @@ fn main() {
         } else {
             //TODO linux folder copy
         };
-        send.send(true).unwrap();
+        send.send(Some("Moved Files".to_string())).unwrap();
+        send.send(None).unwrap();
     });
     let mut text = "Installing";
+    let mut text_log = String::new();
     let mut green = 0.14;
     let mut autokill: Option<Instant> = None;
     'render: loop {
@@ -105,10 +108,14 @@ fn main() {
             }
         }
 
-        if let Ok(_) = recv.try_recv() {
-            autokill = Some(Instant::now());
-            text = "DONE";
-            green = 0.6;
+        if let Ok(x) = recv.try_recv() {
+            if let Some(message) = x {
+                text_log = message;
+            } else {
+                autokill = Some(Instant::now());
+                text = "DONE";
+                green = 0.6;
+            }
         }
         Canvas::new()
             .pad(15.0)
@@ -124,7 +131,11 @@ fn main() {
             .color(hsl(1.0, 1.0, 1.0))
             .font_size(48)
             .set(ids.b1, ui);
-
+        Text::new(&text_log)
+            .mid_bottom_of(ids.can)
+            .color(hsl(1.0, 1.0, 1.0))
+            .font_size(16)
+            .set(ids.l1, ui);
         if let Some(primitives) = ui.draw_if_changed() {
             renderer.fill(&display.0, primitives, &image_map);
             let mut target = display.0.draw();
@@ -136,4 +147,4 @@ fn main() {
 
     thread_git.join().unwrap();
 }
-widget_ids!(struct Ids { can,t1,b1 });
+widget_ids!(struct Ids { can,t1,b1,l1 });
