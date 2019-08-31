@@ -13,7 +13,7 @@ extern crate glium;
 struct Asset;
 use conrod_core::{text, Colorable};
 use glium::Surface;
-use std::{env, thread, time::Instant};
+use std::{env, fs, path::PathBuf, thread, time::Instant};
 
 mod conrod_support;
 mod sfl;
@@ -26,12 +26,6 @@ fn main() {
     let path_root = env::var("HOME").expect("Failed to get your home directory") + "/.minecraft";
     #[cfg(target_os = "windows")]
     let path_root = env::var("APPDATA").expect("Failed to get APPDATA directory") + "/.minecraft";
-    let url = if let Some(input) = args.nth(0) {
-        input
-    } else {
-        "https://github.com/ssf-tf/mc-pack1.git".into()
-    };
-    let path = format!("{0}/.tmp_git/{1}", path_root, base64::encode(&url));
 
     const WIDTH: u32 = 480;
     const HEIGHT: u32 = 480;
@@ -53,33 +47,72 @@ fn main() {
     let mut renderer = conrod_glium::Renderer::new(&display.0).unwrap();
     let image_map = conrod_core::image::Map::<glium::texture::Texture2d>::new();
     let mut event_loop = conrod_support::EventLoop::new();
-    let (send, recv) = std::sync::mpsc::channel();
+    //
     //off thread the install
-    let path_lib = path_root.clone();
+    //
+    let (send, recv) = std::sync::mpsc::channel();
     let path_to = if let Some(input) = args.nth(0) {
+        PathBuf::from(input)
+    } else {
+        PathBuf::from(&path_root)
+    };
+    let url = if let Some(input) = args.nth(0) {
         input
     } else {
-        path_root.into()
+        "https://github.com/ssf-tf/mc-pack1.git".into()
     };
-    let thread_git = thread::spawn(move || {
-        sfl::update(&path, &url, &send);
+    let path = format!("{0}/.tmp_git/{1}", &path_root, base64::encode(&url));
+    //
 
-        send.send(Some("Moving Files".to_string())).unwrap();
-        if cfg!(target_os = "windows") {
-            use sfl::robcop;
-            robcop(&path, &path_to, "mods", true);
-            robcop(&path, &path_to, "config", true);
-            robcop(&path, &path_to, "scripts", true);
-            robcop(&path, &path_to, "resources", false);
-            robcop(&path, &path_lib, "versions", false);
-        } else {
-            //TODO linux folder copy
-        };
-        send.send(Some("Moved Files".to_string())).unwrap();
-        send.send(None).unwrap();
+    //
+    let thread_git = thread::spawn(move || {
+        use sfl::file::{get_contents, remove_item};
+        let mut log = sfl::Loghelper::new(send);
+        sfl::update(&path, &url, &mut log);
+
+        log.title("Moving Files");
+        log.desc("Taking note of relevant files");
+
+        if !&path_to.exists() {
+            fs::DirBuilder::new()
+                .recursive(true)
+                .create(&path_to)
+                .unwrap();
+        }
+        let mut repo_paths = get_contents(&path, vec!["mods", "scripts"]);
+        let mut versions_path = PathBuf::from(&path);
+        let end_paths = get_contents(&path_to.to_str().unwrap(), vec!["mods", "scripts"]).1;
+        versions_path.push("versions");
+        log.title("Installing files");
+        if let Some(repo_versions) = remove_item(&mut repo_paths.0, versions_path) {
+            log.desc("Installing versions");
+            sfl::file::copy(repo_versions, &PathBuf::from(&path_root), &mut log);
+        }
+        for entry in repo_paths.0.iter() {
+            log.desc("Installing Other");
+            sfl::file::copy(entry.to_path_buf(), &path_to, &mut log);
+        }
+        log.title("Cleaning up");
+        for entry in end_paths {
+            sfl::file::clear_extra(
+                &PathBuf::from(&path),
+                &entry,
+                entry.file_name().unwrap().to_str().unwrap().to_string(),
+            );
+        }
+        log.title("Installnd Mods & Scripts");
+        for entry in repo_paths.1.iter() {
+            log.desc("Installing Mods & Scripts");
+            sfl::file::copy(entry.to_path_buf(), &path_to, &mut log);
+        }
+
+        //Lie to the user
+        log.title("Closing in 5s");
+        log.none();
     });
     let mut text = "Installing";
     let mut text_log = String::new();
+    let mut text_desc = String::new();
     let mut green = 0.14;
     let mut autokill: Option<Instant> = None;
     'render: loop {
@@ -109,8 +142,9 @@ fn main() {
         }
 
         if let Ok(x) = recv.try_recv() {
-            if let Some(message) = x {
-                text_log = message;
+            if let Some((log, desc)) = x {
+                text_log = log.into();
+                text_desc = desc.into();
             } else {
                 autokill = Some(Instant::now());
                 text = "DONE";
@@ -125,17 +159,22 @@ fn main() {
             .mid_top_of(ids.can)
             .color(hsl(1.0, 1.0, 1.0))
             .font_size(32)
-            .set(ids.t1, ui);
+            .set(ids.version, ui);
         Text::new(text)
             .middle_of(ids.can)
             .color(hsl(1.0, 1.0, 1.0))
             .font_size(48)
-            .set(ids.b1, ui);
+            .set(ids.status, ui);
         Text::new(&text_log)
-            .mid_bottom_of(ids.can)
+            .mid_bottom_with_margin(40.0)
+            .color(hsl(1.0, 1.0, 1.0))
+            .font_size(24)
+            .set(ids.log, ui);
+        Text::new(&text_desc)
+            .mid_bottom_with_margin(20.0)
             .color(hsl(1.0, 1.0, 1.0))
             .font_size(16)
-            .set(ids.l1, ui);
+            .set(ids.desc, ui);
         if let Some(primitives) = ui.draw_if_changed() {
             renderer.fill(&display.0, primitives, &image_map);
             let mut target = display.0.draw();
@@ -147,4 +186,4 @@ fn main() {
 
     thread_git.join().unwrap();
 }
-widget_ids!(struct Ids { can,t1,b1,l1 });
+widget_ids!(struct Ids { can,version,status,log,desc });
