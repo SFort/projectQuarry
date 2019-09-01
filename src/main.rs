@@ -100,7 +100,7 @@ fn main() {
                 entry.file_name().unwrap().to_str().unwrap().to_string(),
             );
         }
-        log.title("Installnd Mods & Scripts");
+        log.title("Installing Mods & Scripts");
         for entry in repo_paths.1.iter() {
             log.desc("Installing Mods & Scripts");
             sfl::file::copy(entry.to_path_buf(), &path_to, &mut log);

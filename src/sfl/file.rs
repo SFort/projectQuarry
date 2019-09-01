@@ -65,7 +65,6 @@ pub fn clear_extra(from: &PathBuf, to: &PathBuf, path: String) {
         }
         let _ = fs::remove_dir(&to);
     } else {
-        println!("{:#?}", &to);
         fs::remove_file(to).unwrap();
     }
 }
