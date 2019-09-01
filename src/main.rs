@@ -51,16 +51,17 @@ fn main() {
     //off thread the install
     //
     let (send, recv) = std::sync::mpsc::channel();
-    let path_to = if let Some(input) = args.nth(0) {
-        PathBuf::from(input)
-    } else {
-        PathBuf::from(&path_root)
-    };
     let url = if let Some(input) = args.nth(0) {
         input
     } else {
         "https://github.com/ssf-tf/mc-pack1.git".into()
     };
+    let path_to = if let Some(input) = args.nth(0) {
+        PathBuf::from(input)
+    } else {
+        PathBuf::from(&path_root)
+    };
+
     let path = format!("{0}/.tmp_git/{1}", &path_root, base64::encode(&url));
     //
 

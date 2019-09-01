@@ -1,6 +1,6 @@
 [package]
 name = "ssf_installer"
-version = "0.0.312"
+version = "0.0.313"
 authors = ["SFort"]
 
 [dependencies]
